@@ -1,0 +1,22 @@
+# 로컬 Gradle 캐시 제외
+.gradle
+
+# 로컬 빌드 결과 제외
+build
+
+# 로컬 DB 파일 제외
+data
+
+# 로컬 업로드 파일 제외
+uploads
+
+# IDE 설정 제외
+.idea
+*.iml
+
+# 로그 제외
+*.log
+*.err
+
+# Git 정보 제외
+.git

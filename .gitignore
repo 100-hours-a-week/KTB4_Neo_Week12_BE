@@ -1,0 +1,20 @@
+# Frontend is managed by the separate FE repository.
+/frontend-react/
+
+# Local environment
+/.env
+/.env.*
+!/.env.example
+
+# Local-only Compose overrides
+/compose.override.yml
+/compose.override.yaml
+
+# IDE and OS files
+/.idea/
+/.vscode/
+/.DS_Store
+*.iml
+
+# Local package cache
+/.pnpm-store/
