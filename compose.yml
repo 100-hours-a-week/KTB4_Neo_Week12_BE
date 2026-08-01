@@ -3,6 +3,34 @@
 name: community
 
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+    # AOF를 사용해 컨테이너 재시작 후에도 최신 Draft 버퍼를 복구한다.
+    command: ["redis-server", "--appendonly", "yes"]
+
+    volumes:
+      - redis-data:/data
+
+    expose:
+      - "6379"
+
+    networks:
+      - community-network
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   backend:
     # backend/Dockerfile을 사용해 이미지를 빌드한다.
     build:
@@ -11,6 +39,9 @@ services:
 
       # 사용할 Dockerfile
       dockerfile: Dockerfile
+
+    # 백엔드 컨테이너가 사용할 수 있는 최대 메모리
+    mem_limit: 640m
 
     # 컨테이너가 비정상 종료되거나 Docker가 재시작되면 다시 실행한다.
     restart: unless-stopped
@@ -28,6 +59,14 @@ services:
 
       # H2 비밀번호 없음
       DB_PASSWORD: ""
+
+      # Compose 내부 Redis 서비스에 연결한다.
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+
+    depends_on:
+      redis:
+        condition: service_healthy
 
     volumes:
       # H2 데이터가 컨테이너 재생성 후에도 남도록 한다.
@@ -85,7 +124,7 @@ services:
 
       args:
         # React가 같은 Nginx 주소로 API를 호출하게 한다.
-        VITE_API_BASE_URL: ""
+        VITE_API_BASE_URL: "/api"
 
     # backend가 healthy 상태가 된 후 frontend를 시작한다.
     depends_on:
@@ -115,6 +154,9 @@ volumes:
 
   # 업로드 이미지 영구 저장용 Docker Volume
   backend-uploads:
+
+  # Redis AOF 데이터 영구 저장용 Docker Volume
+  redis-data:
 
 networks:
   # frontend와 backend만 통신하는 Bridge 네트워크
