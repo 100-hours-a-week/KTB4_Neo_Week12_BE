@@ -31,18 +31,6 @@ public class PostController {
 
     private final PostService postService;
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<PostCreateResponseDto>> createPost(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody PostRequestDto request
-    ) {
-        PostCreateResponseDto response = postService.createPost(userDetails.getUsername(), request);
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(new ApiResponse<>("create_post_success", response));
-    }
-
     @GetMapping
     public ResponseEntity<ApiResponse<Page<PostListResponseDto>>> getPostList(
             @AuthenticationPrincipal UserDetails userDetails,

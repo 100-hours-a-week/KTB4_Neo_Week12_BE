@@ -38,8 +38,6 @@ import java.util.Objects;
 @Transactional
 public class PostService {
 
-    private static final long POST_LIMIT_MINUTES = 1L;
-    private static final long MAX_POSTS_PER_MINUTE = 3L;
     private static final long ONE_DAY_HOURS = 24L;
     private static final long BLIND_REPORT_THRESHOLD = 5L;
 
@@ -51,36 +49,6 @@ public class PostService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
 
-    public PostCreateResponseDto createPost(String email, PostRequestDto request) {
-        User user = getActiveUser(email);
-        LocalDateTime oneMinuteAgo = LocalDateTime.now().minusMinutes(POST_LIMIT_MINUTES);
-
-        long recentPostCount = postRepository.countByUserAndCreatedAtAfter(user, oneMinuteAgo);
-
-        if (recentPostCount >= MAX_POSTS_PER_MINUTE) {
-            throw new ApiException(ErrorCode.TOO_MANY_REQUESTS);
-        }
-
-        Post post = new Post(
-                user,
-                request.getTitle(),
-                request.getPostBody(),
-                request.getPostImage()
-        );
-
-        Post savedPost = postRepository.save(post);
-
-        return new PostCreateResponseDto(
-                savedPost.getPostId(),
-                savedPost.getTitle(),
-                savedPost.getPostBody(),
-                savedPost.getPostImage(),
-                savedPost.getUser().getUserId(),
-                savedPost.getUser().getNickname(),
-                savedPost.getUser().getProfileImage(),
-                savedPost.getCreatedAt()
-        );
-    }
 
     @Transactional(readOnly = true)
     public Page<PostListResponseDto> getPostList(String email, Pageable pageable) {

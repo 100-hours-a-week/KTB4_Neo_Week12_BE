@@ -45,7 +45,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/users/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/uploads/images").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().hasAnyRole("USER", "ADMIN")
                 )

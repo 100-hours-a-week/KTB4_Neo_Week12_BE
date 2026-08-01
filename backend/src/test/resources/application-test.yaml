@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:community-test
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+draft:
+  redis-ttl: 3d
+  sync-delay: 0s
+  sync-interval: 60s
+  sync-batch-size: 100
+  cleanup-interval: 24h
+  retention: 7d
+  cleanup-batch-size: 100
+
+jwt:
+  secret: test-jwt-secret-key-for-automated-tests-only
+  expiration: 3600000
+  refresh-expiration: 604800000

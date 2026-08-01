@@ -2,6 +2,9 @@ package com.ktb.community.domain.draft.entity;
 
 import com.ktb.community.domain.user.entity.User;
 import com.ktb.community.global.entity.BaseTimeEntity;
+import static com.ktb.community.domain.draft.support.DraftContentNormalizer.isEmpty;
+import static com.ktb.community.domain.draft.support.DraftContentNormalizer.normalizeImage;
+import static com.ktb.community.domain.draft.support.DraftContentNormalizer.normalizeText;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,7 +14,15 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "drafts")
+@Table(
+        name = "drafts",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_drafts_active_owner",
+                        columnNames = "activeOwnerId"
+                )
+        }
+)
 public class Draft extends BaseTimeEntity {
 
     @Id
@@ -23,6 +34,12 @@ public class Draft extends BaseTimeEntity {
     @JoinColumn(name = "userId", nullable = false)
     private User user;
 
+    @Column(name = "activeOwnerId")
+    private Long activeOwnerId;
+
+    @Column(name = "publishedPostId")
+    private Long publishedPostId;
+
     @Column(name = "title", length = 255)
     private String title;
 
@@ -32,24 +49,99 @@ public class Draft extends BaseTimeEntity {
     @Column(name = "postImage", length = 500)
     private String postImage;
 
-    @Column(name = "published", nullable = false)
-    private boolean published = false;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private DraftStatus status;
 
-    public Draft(User user, String title, String postBody, String postImage) {
+    @Column(name = "contentVersion", nullable = false)
+    private long contentVersion;
+
+    @Version
+    @Column(name = "entityVersion")
+    private Long entityVersion;
+
+
+    @Column(name = "rdbSavedAt", nullable = false)
+    private LocalDateTime rdbSavedAt;
+
+    @Column(name = "publishedAt")
+    private LocalDateTime publishedAt;
+
+    @Column(name = "deletedAt")
+    private LocalDateTime deletedAt;
+
+    public Draft(User user, String title, String postBody, String postImage, long contentVersion, LocalDateTime rdbSavedAt) {
         this.user = user;
-        this.title = title;
-        this.postBody = postBody;
-        this.postImage = postImage;
+        this.activeOwnerId = user.getUserId();
+        this.title = normalizeText(title);
+        this.postBody = normalizeText(postBody);
+        this.postImage = normalizeImage(postImage);
+        this.status = DraftStatus.ACTIVE;
+        this.contentVersion = contentVersion;
+        this.rdbSavedAt = rdbSavedAt;
     }
 
-    public void autosave(String title, String postBody, String postImage) {
-        this.title = title;
-        this.postBody = postBody;
-        this.postImage = postImage;
+    public void saveSnapshot(
+            String title,
+            String postBody,
+            String postImage,
+            long contentVersion,
+            LocalDateTime savedAt
+    ) {
+        ensureActive();
+        this.title = normalizeText(title);
+        this.postBody = normalizeText(postBody);
+        this.postImage = normalizeImage(postImage);
+        this.contentVersion = contentVersion;
+        this.rdbSavedAt = savedAt;
     }
 
-    public void publish() {
-        this.published = true;
+    public void publish(
+            String title,
+            String postBody,
+            String postImage,
+            long contentVersion,
+            Long publishedPostId,
+            LocalDateTime publishedAt
+    ) {
+        saveSnapshot(
+                title,
+                postBody,
+                postImage,
+                contentVersion,
+                publishedAt
+        );
+
+        this.status = DraftStatus.PUBLISHED;
+        this.publishedPostId = publishedPostId;
+        this.publishedAt = publishedAt;
+        this.activeOwnerId = null;
     }
 
+    public void delete(LocalDateTime deletedAt) {
+        ensureActive();
+        this.status = DraftStatus.DELETED;
+        this.deletedAt = deletedAt;
+        this.activeOwnerId = null;
+    }
+
+    public boolean isActive() {
+        return status == DraftStatus.ACTIVE;
+    }
+
+    private void ensureActive() {
+        if (!isActive()) {
+            throw new IllegalStateException(
+                    "Draft is not active"
+            );
+        }
+    }
+
+    public boolean isEmptyContent() {
+        return isEmpty(
+                title,
+                postBody,
+                postImage
+        );
+    }
 }
