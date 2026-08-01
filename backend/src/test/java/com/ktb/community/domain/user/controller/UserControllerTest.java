@@ -77,7 +77,7 @@ class UserControllerTest {
                                   "password": "Test1234!",
                                   "passwordCheck": "Test1234!",
                                   "nickname": "neo",
-                                  "profileImage": "/profile.png"
+                                  "profileUploadToken": "verified-upload-token"
                                 }
                                 """))
                 .andExpect(status().isCreated())

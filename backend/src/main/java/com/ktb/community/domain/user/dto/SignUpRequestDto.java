@@ -25,5 +25,6 @@ public class SignUpRequestDto {
     @NotBlank(message = "닉네임은 필수입니다.")
     private String nickname;
 
-    private String profileImage;
+    @NotBlank(message = "프로필 이미지 업로드 정보는 필수입니다.")
+    private String profileUploadToken;
 }

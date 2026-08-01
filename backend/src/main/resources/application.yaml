@@ -45,3 +45,12 @@ jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:3600000}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+  s3:
+    bucket-name: ${S3_BUCKET_NAME:local-community-images}
+    public-base-url: ${S3_PUBLIC_BASE_URL:http://localhost.invalid}
+    presigned-url-expiration-seconds: ${S3_PRESIGNED_URL_EXPIRATION_SECONDS:300}
+    upload-session-ttl-seconds: ${S3_UPLOAD_SESSION_TTL_SECONDS:600}
+    max-image-size: ${S3_MAX_IMAGE_SIZE:10485760}

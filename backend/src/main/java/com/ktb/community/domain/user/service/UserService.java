@@ -15,10 +15,13 @@ import com.ktb.community.global.exception.ErrorCode;
 import com.ktb.community.domain.user.repository.RefreshTokenRepository;
 import com.ktb.community.domain.user.repository.UserRepository;
 import com.ktb.community.security.jwt.JwtTokenProvider;
+import com.ktb.community.domain.upload.service.ImageUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 
@@ -31,6 +34,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final ImageUploadService imageUploadService;
 
     private static final int REFRESH_TOKEN_VALIDITY_DAY = 7;
 
@@ -47,14 +51,36 @@ public class UserService {
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
 
+        String profileImage = imageUploadService.reserveVerifiedSignupImage(
+                request.getProfileUploadToken()
+        );
+        boolean synchronizedTransaction = TransactionSynchronizationManager.isSynchronizationActive();
+        if (synchronizedTransaction) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCompletion(int status) {
+                            if (status == TransactionSynchronization.STATUS_COMMITTED) {
+                                imageUploadService.consumeSignupImage(request.getProfileUploadToken());
+                            } else {
+                                imageUploadService.releaseSignupImage(request.getProfileUploadToken());
+                            }
+                        }
+                    }
+            );
+        }
+
         User user = new User(
                 request.getEmail(),
                 encodedPassword,
                 request.getNickname(),
-                request.getProfileImage()
+                profileImage
         );
 
         User savedUser = userRepository.save(user);
+        if (!synchronizedTransaction) {
+            imageUploadService.consumeSignupImage(request.getProfileUploadToken());
+        }
 
         return new SignUpResponseDto(savedUser.getUserId());
 

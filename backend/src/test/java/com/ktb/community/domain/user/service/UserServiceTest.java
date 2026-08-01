@@ -15,6 +15,7 @@ import com.ktb.community.domain.user.repository.UserRepository;
 import com.ktb.community.global.exception.ApiException;
 import com.ktb.community.global.exception.ErrorCode;
 import com.ktb.community.security.jwt.JwtTokenProvider;
+import com.ktb.community.domain.upload.service.ImageUploadService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,9 @@ class UserServiceTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Mock
+    private ImageUploadService imageUploadService;
+
     @InjectMocks
     private UserService userService;
 
@@ -90,6 +94,8 @@ class UserServiceTest {
             given(userRepository.existsByEmailAndDeletedFalse("test@example.com")).willReturn(false);
             given(userRepository.existsByNicknameAndDeletedFalse("neo")).willReturn(false);
             given(passwordEncoder.encode("Password123!")).willReturn("encoded-password");
+            given(imageUploadService.reserveVerifiedSignupImage("verified-upload-token"))
+                    .willReturn("/profile.png");
             given(userRepository.save(any(User.class))).willAnswer(invocation -> {
                 User savedUser = invocation.getArgument(0); // save 메소드에 전달된 첫 인자를 저장하기 위해서 꺼낸다.
                 ReflectionTestUtils.setField(savedUser, "userId", 1L);
@@ -603,7 +609,11 @@ class UserServiceTest {
         ReflectionTestUtils.setField(request, "password", password);
         ReflectionTestUtils.setField(request, "passwordCheck", passwordCheck);
         ReflectionTestUtils.setField(request, "nickname", nickname);
-        ReflectionTestUtils.setField(request, "profileImage", profileImage);
+        ReflectionTestUtils.setField(
+                request,
+                "profileUploadToken",
+                profileImage == null ? null : "verified-upload-token"
+        );
         return request;
     }
 
