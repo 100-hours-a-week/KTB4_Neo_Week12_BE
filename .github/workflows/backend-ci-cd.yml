@@ -93,7 +93,7 @@ jobs:
         run: |
           scp \
             -i ~/.ssh/community-server-key.pem \
-            compose.prod.yml \
+            compose.yml \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.DEPLOY_PATH }}/compose.prod.yml"
 
       # EC2에서 최신 백엔드 이미지 pull 및 컨테이너 갱신
@@ -103,9 +103,9 @@ jobs:
             -i ~/.ssh/community-server-key.pem \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "cd '${{ secrets.DEPLOY_PATH }}' && \
-             docker compose -f compose.prod.yml pull backend && \
-             docker compose -f compose.prod.yml up -d backend && \
-             docker compose -f compose.prod.yml ps backend"
+             docker compose -f compose.yml pull backend && \
+             docker compose -f compose.yml up -d backend && \
+             docker compose -f compose.yml ps backend"
 
       # 애플리케이션 시작을 기다린 후 상태와 로그 확인
       - name: Check backend
@@ -116,5 +116,5 @@ jobs:
             -i ~/.ssh/community-server-key.pem \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
             "cd '${{ secrets.DEPLOY_PATH }}' && \
-             docker compose -f compose.prod.yml ps backend && \
-             docker compose -f compose.prod.yml logs --tail=100 backend"
+             docker compose -f compose.yml ps backend && \
+             docker compose -f compose.yml logs --tail=100 backend"
