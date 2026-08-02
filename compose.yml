@@ -32,13 +32,7 @@ services:
         max-file: "3"
 
   backend:
-    # backend/Dockerfile을 사용해 이미지를 빌드한다.
-    build:
-      # Docker 빌드 컨텍스트
-      context: ./backend
-
-      # 사용할 Dockerfile
-      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME}/ktb-community-be:latest
 
     # 백엔드 컨테이너가 사용할 수 있는 최대 메모리
     mem_limit: 640m
@@ -124,14 +118,7 @@ services:
         max-file: "3"
 
   frontend:
-    # React 빌드와 Nginx 이미지를 생성한다.
-    build:
-      context: ./frontend-react
-      dockerfile: Dockerfile
-
-      args:
-        # React가 같은 Nginx 주소로 API를 호출하게 한다.
-        VITE_API_BASE_URL: "/api"
+    image: ${DOCKER_USERNAME}/ktb-community-frontend:latest
 
     # backend가 healthy 상태가 된 후 frontend를 시작한다.
     depends_on:
