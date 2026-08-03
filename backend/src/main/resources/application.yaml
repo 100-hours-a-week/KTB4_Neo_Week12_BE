@@ -20,6 +20,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        highlight_sql: false
         ddl-auto: update
 
   application:
