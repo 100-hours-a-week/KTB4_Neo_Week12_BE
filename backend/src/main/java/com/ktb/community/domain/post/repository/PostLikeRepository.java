@@ -4,6 +4,7 @@ import com.ktb.community.domain.post.entity.Post;
 import com.ktb.community.domain.post.entity.PostLike;
 import com.ktb.community.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -28,4 +29,14 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
             @Param("postIds") Collection<Long> postIds
     );
 
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+        delete from PostLike pl
+        where pl.post.postId = :postId
+          and pl.user.userId = :userId
+        """)
+    int deleteByPostIdAndUserId(
+            @Param("postId") Long postId,
+            @Param("userId") Long userId
+    );
 }

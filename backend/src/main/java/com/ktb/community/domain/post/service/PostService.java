@@ -23,6 +23,7 @@ import com.ktb.community.domain.post.repository.PostRepository;
 import com.ktb.community.domain.post.repository.PostViewRepository;
 import com.ktb.community.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -164,24 +165,56 @@ public class PostService {
             throw new ApiException(ErrorCode.CONFLICTED_STATE);
         }
 
-        PostLike postLike = new PostLike(post, user);
-        postLikeRepository.save(postLike);
-        post.increaseLikes();
+        try {
+            postLikeRepository.saveAndFlush(new PostLike(post, user));
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(ErrorCode.CONFLICTED_STATE);
+        }
 
-        return new LikeResponseDto(post.getPostId(), true, post.getLikes());
+        int updatedRows = postRepository.increaseLikes(post.getPostId());
+
+        if(updatedRows != 1) {
+            throw new ApiException(ErrorCode.POST_NOT_FOUND);
+        }
+
+        int likeCount = postRepository.findLikeCount(post.getPostId());
+
+        return new LikeResponseDto(
+                post.getPostId(),
+                true,
+                likeCount
+        );
     }
 
     public LikeResponseDto unlikePost(String email, Long postId) {
         User user = getActiveUser(email);
         Post post = getActivePost(postId);
 
-        PostLike postLike = postLikeRepository.findByPostAndUser(post, user)
-                .orElseThrow(() -> new ApiException(ErrorCode.CONFLICTED_STATE));
+        Long activePostId = post.getPostId();
+        Long userId = user.getUserId();
 
-        postLikeRepository.delete(postLike);
-        post.decreaseLikes();
+        int deletedRows = postLikeRepository.deleteByPostIdAndUserId(
+                activePostId,
+                userId
+        );
 
-        return new LikeResponseDto(post.getPostId(), false, post.getLikes());
+        if (deletedRows != 1) {
+            throw new ApiException(ErrorCode.CONFLICTED_STATE);
+        }
+
+        int updatedRows = postRepository.decreaseLikes(activePostId);
+
+        if (updatedRows != 1) {
+            throw new ApiException(ErrorCode.CONFLICTED_STATE);
+        }
+
+        int likeCount = postRepository.findLikeCount(activePostId);
+
+        return new LikeResponseDto(
+                activePostId,
+                false,
+                likeCount
+        );
     }
 
     public ReportResponseDto reportPost(String email, Long postId, ReportRequestDto request) {
@@ -210,7 +243,12 @@ public class PostService {
                 .map(postView -> {
                     if (postView.getLastViewedAt().isBefore(oneDayAgo)) {
                         postView.updateLastViewedAt();
-                        post.increaseViews();
+
+                        int updatedRows = postRepository.increaseViews(post.getPostId());
+                        if (updatedRows != 1) {
+                            throw new ApiException(ErrorCode.POST_NOT_FOUND);
+                        }
+
                         return true;
                     }
 
@@ -219,7 +257,12 @@ public class PostService {
                 .orElseGet(() -> {
                     PostView postView = new PostView(post, user);
                     postViewRepository.save(postView);
-                    post.increaseViews();
+
+                    int updatedRows = postRepository.increaseViews(post.getPostId());
+                    if(updatedRows != 1) {
+                        throw new ApiException(ErrorCode.POST_NOT_FOUND);
+                    }
+
                     return true;
                 });
     }

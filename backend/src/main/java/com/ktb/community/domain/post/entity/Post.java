@@ -77,29 +77,6 @@ public class Post extends BaseTimeEntity {
         this.deletedAt = LocalDateTime.now();
     }
 
-    public void increaseViews() {
-        this.views++;
-    }
-
-    public void increaseLikes() {
-        this.likes++;
-    }
-
-    public void decreaseLikes() {
-        this.likes--;
-    }
-
-    public void increaseComments() {
-        this.comments++;
-    }
-
-
-    public void decreaseComments() {
-        if (this.comments > 0) {
-            this.comments--;
-        }
-    }
-
     public void blind() {
         this.blinded = true;
     }

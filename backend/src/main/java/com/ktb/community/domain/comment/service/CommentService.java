@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,12 @@ public class CommentService {
         );
 
         Comment savedComment = commentRepository.save(comment);
-        post.increaseComments();
+
+        int updatedRows = postRepository.increaseComments(post.getPostId());
+
+        if(updatedRows != 1){
+            throw new ApiException(ErrorCode.POST_NOT_FOUND);
+        }
 
         return toCommentResponse(savedComment);
     }
@@ -76,7 +82,12 @@ public class CommentService {
         );
 
         Comment savedReply = commentRepository.save(reply);
-        post.increaseComments();
+
+        int updatedRows = postRepository.increaseComments(post.getPostId());
+
+        if(updatedRows != 1) {
+            throw new ApiException(ErrorCode.POST_NOT_FOUND);
+        }
 
         return toCommentResponse(savedReply);
     }
@@ -158,14 +169,22 @@ public class CommentService {
 
         validateCommentOwner(user, comment);
 
-        if (comment.isDeleted()) {
+        Long postId = comment.getPost().getPostId();
+
+        int deletedRows = commentRepository.softDeleteIfActive(
+                commentId,
+                LocalDateTime.now()
+        );
+
+        if (deletedRows != 1) {
             throw new ApiException(ErrorCode.ALREADY_DELETED);
         }
 
-        comment.delete();
+        int updatedRows = postRepository.decreaseComments(postId);
 
-        // "삭제된 댓글입니다" 껍데기 댓글은 comments에 카운팅하지 않음으로 조건 없이 모든 댓글 삭제 시 감소
-        comment.getPost().decreaseComments();
+        if (updatedRows != 1) {
+            throw new ApiException(ErrorCode.CONFLICTED_STATE);
+        }
     }
 
     private Comment getComment(Long commentId) {
