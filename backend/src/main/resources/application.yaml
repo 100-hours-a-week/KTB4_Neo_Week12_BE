@@ -16,9 +16,11 @@ spring:
     driver-class-name: org.h2.Driver
 
   jpa:
-    hibernate:
-      ddl-auto: update
     show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        ddl-auto: update
 
   application:
     name: community
@@ -27,6 +29,12 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
 
 server:
   servlet:
