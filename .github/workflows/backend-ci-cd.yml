@@ -56,8 +56,8 @@ jobs:
           # ${{ github.sha }}: 어떤 코드로 빌드한 이미지인지 정확히 추적
           # SHA 태그: 최신 버전에 문제가 생겼을 때 이전 커밋 이미지로 롤백 가능
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/ktb-community-backend:latest
-            ${{ secrets.DOCKER_USERNAME }}/ktb-community-backend:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/ktb-community-be:latest
+            ${{ secrets.DOCKER_USERNAME }}/ktb-community-be:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -94,7 +94,7 @@ jobs:
           scp \
             -i ~/.ssh/community-server-key.pem \
             compose.yml \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.DEPLOY_PATH }}/compose.prod.yml"
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.DEPLOY_PATH }}/compose.yml"
 
       # EC2에서 최신 백엔드 이미지 pull 및 컨테이너 갱신
       - name: Pull and deploy backend
