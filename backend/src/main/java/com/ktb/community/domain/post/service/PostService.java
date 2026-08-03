@@ -2,7 +2,6 @@ package com.ktb.community.domain.post.service;
 
 import com.ktb.community.domain.comment.repository.CommentRepository;
 import com.ktb.community.domain.post.dto.LikeResponseDto;
-import com.ktb.community.domain.post.dto.PostCreateResponseDto;
 import com.ktb.community.domain.post.dto.PostDetailResponseDto;
 import com.ktb.community.domain.post.dto.PostListResponseDto;
 import com.ktb.community.domain.post.dto.PostRequestDto;
@@ -28,10 +27,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -54,12 +55,43 @@ public class PostService {
     public Page<PostListResponseDto> getPostList(String email, Pageable pageable) {
         User user = getActiveUser(email);
 
-        return postRepository.findByDeletedFalseOrderByCreatedAtDesc(pageable)
-                .map(post -> new PostListResponseDto(
+        Page<Post> postPage = postRepository.findByDeletedFalseOrderByCreatedAtDesc(pageable);
+
+        List<Long> postIds = postPage.getContent().stream()
+                .map(Post::getPostId)
+                .toList();
+
+        if(postIds.isEmpty()) {
+            return postPage.map(
+                    post -> new PostListResponseDto(
+                            post,
+                            false,
+                            false
+                    )
+            );
+        }
+
+        Set<Long> likedPostIds = new HashSet<>(
+                postLikeRepository.findLikedPostIds(
+                        user.getUserId(),
+                        postIds
+                )
+        );
+
+        Set<Long> commentedPostIds = new HashSet<>(
+                commentRepository.findCommentedPostIds(
+                        user.getUserId(),
+                        postIds
+                )
+        );
+
+        return postPage.map(
+                post -> new PostListResponseDto(
                         post,
-                        postLikeRepository.existsByPostAndUser(post, user),
-                        commentRepository.existsByPostAndUserAndDeletedFalse(post, user)
-                ));
+                        likedPostIds.contains(post.getPostId()),
+                        commentedPostIds.contains(post.getPostId())
+                )
+        );
     }
 
     public PostDetailResponseDto getPostDetail(String email, Long postId) {
