@@ -18,3 +18,10 @@
 
 # Local package cache
 /.pnpm-store/
+
+# Local performance-test artifacts
+jmeter.log
+*.jtl
+performance/data/
+performance/results/
+performance/reports/

@@ -1,0 +1,151 @@
+name: community-perf
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    image: community-perf-backend:local
+    restart: unless-stopped
+
+    environment:
+      SPRING_PROFILES_ACTIVE: perf
+
+      DB_URL: "jdbc:mysql://mysql:3306/community?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC"
+      DB_USERNAME: "community"
+      DB_PASSWORD: "local-performance-password"
+
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+
+      JWT_SECRET: "local-performance-test-jwt-secret-key-over-32-bytes"
+      JWT_EXPIRATION: "3600000"
+      JWT_REFRESH_EXPIRATION: "604800000"
+
+      AWS_REGION: "ap-northeast-2"
+      AWS_ACCESS_KEY_ID: "local-performance"
+      AWS_SECRET_ACCESS_KEY: "local-performance-secret"
+      AWS_EC2_METADATA_DISABLED: "true"
+
+      S3_BUCKET_NAME: "local-performance-bucket"
+      S3_PUBLIC_BASE_URL: "http://localhost.invalid"
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    ports:
+      # 운영 및 기존 로컬 backend와 충돌하지 않는 성능 테스트 전용 포트
+      - "18080:8080"
+
+    cpus: 1.0
+    mem_limit: 1g
+
+    networks:
+      - performance-network
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "bash -c '</dev/tcp/127.0.0.1/8080'"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+
+    environment:
+      MYSQL_DATABASE: community
+      MYSQL_USER: community
+      MYSQL_PASSWORD: local-performance-password
+      MYSQL_ROOT_PASSWORD: local-root-password
+      TZ: UTC
+
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --slow-query-log=ON
+      - --long-query-time=0.2
+      - --performance-schema=ON
+
+    ports:
+      # 기존 로컬 MySQL과 충돌하지 않도록 호스트는 3307 사용
+      - "3307:3306"
+
+    volumes:
+      - mysql-perf-data:/var/lib/mysql
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+    cpus: 2.0
+    mem_limit: 2g
+
+    networks:
+      - performance-network
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+    ports:
+      - "16379:6379"
+
+    command: ["redis-server", "--appendonly", "yes"]
+
+    volumes:
+      - redis-perf-data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+    cpus: 0.5
+    mem_limit: 512m
+
+    networks:
+      - performance-network
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mysql-perf-data:
+  redis-perf-data:
+
+networks:
+  performance-network:
+    driver: bridge
