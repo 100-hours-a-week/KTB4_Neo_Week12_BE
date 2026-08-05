@@ -25,3 +25,6 @@ jmeter.log
 performance/data/
 performance/results/
 performance/reports/
+performance/.DS_Store
+performance/sql/.DS_Store
+performance/EXPLAIN_ANALYZE_AB_COMPARISON.md
