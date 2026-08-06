@@ -18,7 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.ktb.community.security.principal.CustomPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
@@ -53,8 +53,8 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@AuthenticationPrincipal UserDetails userDetails) {
-        userService.logout(userDetails.getUsername());
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal CustomPrincipal principal) {
+        userService.logout(principal.getUserId());
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, deleteRefreshTokenCookie().toString())
                 .build();
@@ -80,10 +80,10 @@ public class UserController {
 
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<UserResponseDto>> getMyPage(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long userId
     ) {
-        UserResponseDto response = userService.getMyPage(userDetails.getUsername(), userId);
+        UserResponseDto response = userService.getMyPage(principal.getUserId(), userId);
 
         return ResponseEntity.ok(
                 new ApiResponse<>("get_mypage_success", response)
@@ -92,12 +92,12 @@ public class UserController {
 
     @PatchMapping("/{userId}")
     public ResponseEntity<ApiResponse<Void>> updateUser(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long userId,
             @Valid @RequestBody UserUpdateRequestDto request
     )
     {
-        userService.updateUser(userDetails.getUsername(), userId, request);
+        userService.updateUser(principal.getUserId(), userId, request);
 
         return ResponseEntity.ok(
                 new ApiResponse<>("update_user_success", null)
@@ -106,11 +106,11 @@ public class UserController {
 
     @PatchMapping("/{userId}/password")
     public ResponseEntity<ApiResponse<Void>> updatePassword(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long userId,
             @Valid @RequestBody PasswordUpdateRequestDto request
     ) {
-        userService.updatePassword(userDetails.getUsername(), userId, request);
+        userService.updatePassword(principal.getUserId(), userId, request);
 
         return ResponseEntity.ok(
                 new ApiResponse<>("update_password_success", null)
@@ -119,10 +119,10 @@ public class UserController {
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<ApiResponse<Boolean>> deleteUser(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long userId
     ) {
-        userService.deleteUser(userDetails.getUsername(), userId);
+        userService.deleteUser(principal.getUserId(), userId);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, deleteRefreshTokenCookie().toString())

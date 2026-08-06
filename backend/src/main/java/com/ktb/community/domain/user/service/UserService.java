@@ -113,30 +113,29 @@ public class UserService {
         return new LoginResponseDto(user.getUserId(), accessToken, refreshToken);
     }
 
-    public void logout(String email) {
-        User user = getActiveUser(email);
-        refreshTokenRepository.deleteByUser(user);
+    public void logout(Long authenticatedUserId) {
+        refreshTokenRepository.deleteByUserId(authenticatedUserId);
     }
 
     @Transactional(readOnly = true)
-    public UserResponseDto getMyPage(String email, Long userId) {
-        User loginUser = getActiveUser(email);
+    public UserResponseDto getMyPage(Long authenticatedUserId, Long userId) {
+        User loginUser = getActiveUser(authenticatedUserId);
 
         validateUserOwner(loginUser, userId);
 
         return new UserResponseDto(loginUser.getUserId(), loginUser.getNickname(), loginUser.getEmail(), loginUser.getProfileImage());
     }
 
-    public void updateUser(String email, Long userId, UserUpdateRequestDto request) {
-        User loginUser = getActiveUser(email);
+    public void updateUser(Long authenticatedUserId, Long userId, UserUpdateRequestDto request) {
+        User loginUser = getActiveUser(authenticatedUserId);
 
         validateUserOwner(loginUser, userId);
 
         loginUser.update(request.getNickname(), request.getProfileImage());
     }
 
-    public void updatePassword(String email, Long userId, PasswordUpdateRequestDto request) {
-        User loginUser = getActiveUser(email);
+    public void updatePassword(Long authenticatedUserId, Long userId, PasswordUpdateRequestDto request) {
+        User loginUser = getActiveUser(authenticatedUserId);
 
         validateUserOwner(loginUser, userId);
 
@@ -152,8 +151,8 @@ public class UserService {
         loginUser.updatePassword(encodedNewPassword);
     }
 
-    public void deleteUser(String email, Long userId) {
-        User loginUser = getActiveUser(email);
+    public void deleteUser(Long authenticatedUserId, Long userId) {
+        User loginUser = getActiveUser(authenticatedUserId);
 
         validateUserOwner(loginUser, userId);
 
@@ -161,8 +160,8 @@ public class UserService {
         loginUser.delete();
     }
 
-    private User getActiveUser(String email) {
-        User user = userRepository.findByEmailAndDeletedFalse(email)
+    private User getActiveUser(Long userId) {
+        User user = userRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED_USER));
 
         return user;

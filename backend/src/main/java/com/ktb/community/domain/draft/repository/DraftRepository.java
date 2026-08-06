@@ -2,7 +2,6 @@ package com.ktb.community.domain.draft.repository;
 
 import com.ktb.community.domain.draft.entity.Draft;
 import com.ktb.community.domain.draft.entity.DraftStatus;
-import com.ktb.community.domain.user.entity.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -17,9 +16,10 @@ import java.util.Optional;
 public interface DraftRepository
         extends JpaRepository<Draft, Long> {
 
-    Optional<Draft> findByDraftIdAndUser(
-            Long draftId,
-            User user
+    @Query("select d from Draft d where d.draftId = :draftId and d.user.userId = :userId")
+    Optional<Draft> findByDraftIdAndUserId(
+            @Param("draftId") Long draftId,
+            @Param("userId") Long userId
     );
 
     Optional<Draft> findByActiveOwnerId(

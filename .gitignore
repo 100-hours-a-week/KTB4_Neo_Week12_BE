@@ -28,3 +28,5 @@ performance/reports/
 performance/.DS_Store
 performance/sql/.DS_Store
 performance/EXPLAIN_ANALYZE_AB_COMPARISON.md
+performance/CUSTOM_PRINCIPAL_C_TEST_PLAN.md
+performance/run-c-custom-principal-test.sh

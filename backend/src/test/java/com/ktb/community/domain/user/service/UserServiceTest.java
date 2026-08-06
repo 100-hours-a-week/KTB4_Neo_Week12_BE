@@ -287,10 +287,10 @@ class UserServiceTest {
         @Test
         @DisplayName("회원 탈퇴 성공 시 유저를 soft delete 하고 프로필 이미지를 제거한다")
         void deleteUser_success() {
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com"))
+            given(userRepository.findByUserIdAndDeletedFalse(1L))
                     .willReturn(Optional.of(activeUser));
 
-            userService.deleteUser("test@example.com", 1L);
+            userService.deleteUser(1L, 1L);
 
             assertThat(activeUser.isDeleted()).isTrue();
             assertThat(activeUser.getProfileImage()).isNull();
@@ -303,10 +303,10 @@ class UserServiceTest {
         @DisplayName("본인이 아니면 회원 탈퇴에 실패한다")
         void deleteUser_notOwner_throwsDeniedAccess() {
             // given
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com")).willReturn(Optional.of(activeUser));
+            given(userRepository.findByUserIdAndDeletedFalse(1L)).willReturn(Optional.of(activeUser));
 
             // when & then
-            assertThatThrownBy(() -> userService.deleteUser("test@example.com", 2L))
+            assertThatThrownBy(() -> userService.deleteUser(1L, 2L))
                     .isInstanceOf(ApiException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.DENIED_ACCESS);
@@ -319,10 +319,10 @@ class UserServiceTest {
         @DisplayName("이미 삭제된 유저면 회원 탈퇴에 실패한다")
         void deleteUser_deletedUser_throwsUnauthorizedUser() {
             // given
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com")).willReturn(Optional.empty());
+            given(userRepository.findByUserIdAndDeletedFalse(1L)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> userService.deleteUser("test@example.com", 1L))
+            assertThatThrownBy(() -> userService.deleteUser(1L, 1L))
                     .isInstanceOf(ApiException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.UNAUTHORIZED_USER);
@@ -338,27 +338,17 @@ class UserServiceTest {
         @Test
         @DisplayName("로그아웃 성공 시 refreshToken을 삭제한다")
         void logout_success() {
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com"))
-                    .willReturn(Optional.of(activeUser));
+            userService.logout(1L);
 
-            userService.logout("test@example.com");
-
-            verify(refreshTokenRepository).deleteByUser(activeUser);
+            verify(refreshTokenRepository).deleteByUserId(1L);
         }
 
         @Test
-        @DisplayName("존재하지 않는 유저면 로그아웃에 실패한다")
-        void logout_userNotFound_throwsUnauthorizedUser() {
-            // given
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com")).willReturn(Optional.empty());
+        @DisplayName("토큰이 없어도 로그아웃은 멱등하게 성공한다")
+        void logout_withoutToken_isIdempotent() {
+            userService.logout(1L);
 
-            // when & then
-            assertThatThrownBy(() -> userService.logout("test@example.com"))
-                    .isInstanceOf(ApiException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.UNAUTHORIZED_USER);
-
-            verify(refreshTokenRepository, never()).deleteByUser(any());
+            verify(refreshTokenRepository).deleteByUserId(1L);
         }
     }
 
@@ -370,10 +360,10 @@ class UserServiceTest {
         @DisplayName("본인 마이페이지 조회에 성공한다")
         void getMyPage_success() {
             // given
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com")).willReturn(Optional.of(activeUser));
+            given(userRepository.findByUserIdAndDeletedFalse(1L)).willReturn(Optional.of(activeUser));
 
             // when
-            UserResponseDto response = userService.getMyPage("test@example.com", 1L);
+            UserResponseDto response = userService.getMyPage(1L, 1L);
 
             // then
             assertThat(response.getUserId()).isEqualTo(1L);
@@ -386,10 +376,10 @@ class UserServiceTest {
         @DisplayName("본인이 아니면 마이페이지 조회에 실패한다")
         void getMyPage_notOwner_throwsDeniedAccess() {
             // given
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com")).willReturn(Optional.of(activeUser));
+            given(userRepository.findByUserIdAndDeletedFalse(1L)).willReturn(Optional.of(activeUser));
 
             // when & then
-            assertThatThrownBy(() -> userService.getMyPage("test@example.com", 2L))
+            assertThatThrownBy(() -> userService.getMyPage(1L, 2L))
                     .isInstanceOf(ApiException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.DENIED_ACCESS);
@@ -405,10 +395,10 @@ class UserServiceTest {
         void updateUser_success() {
             // given
             UserUpdateRequestDto request = userUpdateRequest("new-neo", "/new-profile.png");
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com")).willReturn(Optional.of(activeUser));
+            given(userRepository.findByUserIdAndDeletedFalse(1L)).willReturn(Optional.of(activeUser));
 
             // when
-            userService.updateUser("test@example.com", 1L, request);
+            userService.updateUser(1L, 1L, request);
 
             // then
             assertThat(activeUser.getNickname()).isEqualTo("new-neo");
@@ -420,10 +410,10 @@ class UserServiceTest {
         void updateUser_notOwner_throwsDeniedAccess() {
             // given
             UserUpdateRequestDto request = userUpdateRequest("new-neo", "/new-profile.png");
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com")).willReturn(Optional.of(activeUser));
+            given(userRepository.findByUserIdAndDeletedFalse(1L)).willReturn(Optional.of(activeUser));
 
             // when & then
-            assertThatThrownBy(() -> userService.updateUser("test@example.com", 2L, request))
+            assertThatThrownBy(() -> userService.updateUser(1L, 2L, request))
                     .isInstanceOf(ApiException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.DENIED_ACCESS);
@@ -441,12 +431,12 @@ class UserServiceTest {
         void updatePassword_success() {
             // given
             PasswordUpdateRequestDto request = passwordUpdateRequest("OldPassword123!", "NewPassword123!", "NewPassword123!");
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com")).willReturn(Optional.of(activeUser));
+            given(userRepository.findByUserIdAndDeletedFalse(1L)).willReturn(Optional.of(activeUser));
             given(passwordEncoder.matches("OldPassword123!", "encoded-password")).willReturn(true);
             given(passwordEncoder.encode("NewPassword123!")).willReturn("new-encoded-password");
 
             // when
-            userService.updatePassword("test@example.com", 1L, request);
+            userService.updatePassword(1L, 1L, request);
 
             // then
             assertThat(activeUser.getPassword()).isEqualTo("new-encoded-password");
@@ -457,10 +447,10 @@ class UserServiceTest {
         void updatePassword_passwordMismatch_throwsPasswordMismatch() {
             // given
             PasswordUpdateRequestDto request = passwordUpdateRequest("OldPassword123!", "NewPassword123!", "Different123!");
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com")).willReturn(Optional.of(activeUser));
+            given(userRepository.findByUserIdAndDeletedFalse(1L)).willReturn(Optional.of(activeUser));
 
             // when & then
-            assertThatThrownBy(() -> userService.updatePassword("test@example.com", 1L, request))
+            assertThatThrownBy(() -> userService.updatePassword(1L, 1L, request))
                     .isInstanceOf(ApiException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.PASSWORD_MISMATCH);
@@ -473,11 +463,11 @@ class UserServiceTest {
         void updatePassword_wrongCurrentPassword_throwsInvalidPassword() {
             // given
             PasswordUpdateRequestDto request = passwordUpdateRequest("WrongPassword123!", "NewPassword123!", "NewPassword123!");
-            given(userRepository.findByEmailAndDeletedFalse("test@example.com")).willReturn(Optional.of(activeUser));
+            given(userRepository.findByUserIdAndDeletedFalse(1L)).willReturn(Optional.of(activeUser));
             given(passwordEncoder.matches("WrongPassword123!", "encoded-password")).willReturn(false);
 
             // when & then
-            assertThatThrownBy(() -> userService.updatePassword("test@example.com", 1L, request))
+            assertThatThrownBy(() -> userService.updatePassword(1L, 1L, request))
                     .isInstanceOf(ApiException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.INVALID_PASSWORD);

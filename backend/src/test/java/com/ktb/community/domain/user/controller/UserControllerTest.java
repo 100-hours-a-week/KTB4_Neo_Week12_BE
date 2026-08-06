@@ -13,6 +13,7 @@ import com.ktb.community.security.filter.JwtAuthenticationFilter;
 import com.ktb.community.security.handler.CustomAuthenticationEntryPoint;
 import com.ktb.community.security.handler.JwtAccessDeniedHandler;
 import com.ktb.community.security.jwt.JwtTokenProvider;
+import com.ktb.community.security.principal.CustomPrincipal;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.context.annotation.Import;
@@ -181,19 +182,19 @@ class UserControllerTest {
         assertThat(response.getStatusCode().value()).isEqualTo(204);
         assertThat(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE))
                 .contains("refreshToken=", "Max-Age=0", "HttpOnly", "Path=/");
-        verify(userService).logout("test@example.com");
+        verify(userService).logout(1L);
     }
 
     @Test
     @DisplayName("마이페이지 조회 성공 시 유저 정보를 응답한다")
     void getMyPage_success_returnsUser() throws Exception {
         // given
-        given(userService.getMyPage("test@example.com", 1L))
+        given(userService.getMyPage(1L, 1L))
                 .willReturn(new UserResponseDto(1L, "neo", "test@example.com", "/profile.png"));
 
         // when & then
         mockMvc.perform(get("/users/1")
-                        .with(user("test@example.com").roles("USER")))
+                        .with(user(userDetails())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("get_mypage_success"))
                 .andExpect(jsonPath("$.data.userId").value(1))
@@ -201,7 +202,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.data.email").value("test@example.com"))
                 .andExpect(jsonPath("$.data.profileImage").value("/profile.png"));
 
-        verify(userService).getMyPage("test@example.com", 1L);
+        verify(userService).getMyPage(1L, 1L);
     }
 
     @Test
@@ -233,7 +234,7 @@ class UserControllerTest {
 
         // then
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        verify(userService).updateUser("test@example.com", 1L, null);
+        verify(userService).updateUser(1L, 1L, null);
     }
 
     @Test
@@ -244,7 +245,7 @@ class UserControllerTest {
 
         // then
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        verify(userService).updatePassword("test@example.com", 1L, null);
+        verify(userService).updatePassword(1L, 1L, null);
     }
 
     @Test
@@ -257,15 +258,15 @@ class UserControllerTest {
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE))
                 .contains("refreshToken=", "Max-Age=0", "HttpOnly", "Path=/");
-        verify(userService).deleteUser("test@example.com", 1L);
+        verify(userService).deleteUser(1L, 1L);
     }
 
-    private UserDetails userDetails() {
-        return org.springframework.security.core.userdetails.User
-                .withUsername("test@example.com")
-                .password("password")
-                .roles("USER")
-                .build();
+    private CustomPrincipal userDetails() {
+        return new CustomPrincipal(
+                1L,
+                "test@example.com",
+                java.util.List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
     }
 
 }

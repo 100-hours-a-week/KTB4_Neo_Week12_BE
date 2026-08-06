@@ -21,7 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.ktb.community.security.principal.CustomPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -33,7 +33,7 @@ public class PostController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<PostListResponseDto>>> getPostList(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @RequestParam(required = false) String page,
             @RequestParam(required = false) String size
     ) {
@@ -44,7 +44,7 @@ public class PostController {
                 pageSize,
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
-        Page<PostListResponseDto> response = postService.getPostList(userDetails.getUsername(), pageable);
+        Page<PostListResponseDto> response = postService.getPostList(principal.getUserId(), pageable);
 
         return ResponseEntity.ok(
                 new ApiResponse<>("get_posts_success", response)
@@ -69,10 +69,10 @@ public class PostController {
 
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDetailResponseDto>> getPostDetail(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long postId
     ) {
-        PostDetailResponseDto response = postService.getPostDetail(userDetails.getUsername(), postId);
+        PostDetailResponseDto response = postService.getPostDetail(principal.getUserId(), postId);
 
         return ResponseEntity.ok(
                 new ApiResponse<>("get_post_detail_success", response)
@@ -81,11 +81,11 @@ public class PostController {
 
     @PutMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostUpdateResponseDto>> updatePost(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long postId,
             @Valid @RequestBody PostRequestDto request
     ) {
-        PostUpdateResponseDto response = postService.updatePost(userDetails.getUsername(), postId, request);
+        PostUpdateResponseDto response = postService.updatePost(principal.getUserId(), postId, request);
 
         return ResponseEntity.ok(
                 new ApiResponse<>("update_post_success", response)
@@ -94,10 +94,10 @@ public class PostController {
 
     @DeleteMapping("/{postId}")
     public ResponseEntity<ApiResponse<Boolean>> deletePost(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long postId
     ) {
-        postService.deletePost(userDetails.getUsername(), postId);
+        postService.deletePost(principal.getUserId(), postId);
 
         return ResponseEntity.ok(
                 new ApiResponse<>("delete_post_success", true)
@@ -106,10 +106,10 @@ public class PostController {
 
     @PostMapping("/{postId}/likes")
     public ResponseEntity<ApiResponse<LikeResponseDto>> likePost(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long postId
     ) {
-        LikeResponseDto response = postService.likePost(userDetails.getUsername(), postId);
+        LikeResponseDto response = postService.likePost(principal.getUserId(), postId);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("like_post_success", response));
@@ -117,10 +117,10 @@ public class PostController {
 
     @DeleteMapping("/{postId}/likes")
     public ResponseEntity<ApiResponse<LikeResponseDto>> unlikePost(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long postId
     ) {
-        LikeResponseDto response = postService.unlikePost(userDetails.getUsername(), postId);
+        LikeResponseDto response = postService.unlikePost(principal.getUserId(), postId);
 
         return ResponseEntity.ok(
                 new ApiResponse<>("unlike_post_success", response)
@@ -129,11 +129,11 @@ public class PostController {
 
     @PostMapping("/{postId}/reports")
     public ResponseEntity<ApiResponse<ReportResponseDto>> reportPost(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long postId,
             @Valid @RequestBody ReportRequestDto request
     ) {
-        ReportResponseDto response = postService.reportPost(userDetails.getUsername(), postId, request);
+        ReportResponseDto response = postService.reportPost(principal.getUserId(), postId, request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("report_post_success", response));

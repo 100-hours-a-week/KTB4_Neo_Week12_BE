@@ -9,7 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.ktb.community.security.principal.CustomPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,22 +25,22 @@ public class UploadController {
 
     @PostMapping("/presign")
     public ResponseEntity<ApiResponse<PresignedUploadResponseDto>> createPresignedUpload(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @Valid @RequestBody PresignedUploadRequestDto request
     ) {
         PresignedUploadResponseDto response = imageUploadService.createPresignedUpload(
-                request, userDetails.getUsername(), false
+                request, principal.getUsername(), false
         );
         return ResponseEntity.ok(new ApiResponse<>("create_presigned_upload_success", response));
     }
 
     @PostMapping("/{uploadId}/complete")
     public ResponseEntity<ApiResponse<ImageUploadCompleteResponseDto>> completeUpload(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable String uploadId
     ) {
         ImageUploadCompleteResponseDto response = imageUploadService.completeUpload(
-                uploadId, userDetails.getUsername(), false
+                uploadId, principal.getUsername(), false
         );
         return ResponseEntity.ok(new ApiResponse<>("complete_image_upload_success", response));
     }

@@ -32,8 +32,8 @@ public class CommentService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
 
-    public CommentResponseDto createComment(String email, Long postId, CommentRequestDto request) {
-        User user = getActiveUser(email);
+    public CommentResponseDto createComment(Long userId, Long postId, CommentRequestDto request) {
+        User user = userRepository.getReferenceById(userId);
         Post post = getActivePost(postId);
 
         Comment comment = new Comment(
@@ -54,8 +54,8 @@ public class CommentService {
         return toCommentResponse(savedComment);
     }
 
-    public CommentResponseDto createReply(String email, Long parentCommentId, CommentRequestDto request) {
-        User user = getActiveUser(email);
+    public CommentResponseDto createReply(Long userId, Long parentCommentId, CommentRequestDto request) {
+        User user = userRepository.getReferenceById(userId);
 
         Comment parentComment = commentRepository.findById(parentCommentId)
                 .orElseThrow(() -> new ApiException(ErrorCode.PARENT_COMMENT_NOT_FOUND));
@@ -144,11 +144,10 @@ public class CommentService {
                 .toList();
     }
 
-    public CommentUpdateResponseDto updateComment(String email, Long commentId, CommentRequestDto request) {
-        User user = getActiveUser(email);
+    public CommentUpdateResponseDto updateComment(Long userId, Long commentId, CommentRequestDto request) {
         Comment comment = getComment(commentId);
 
-        validateCommentOwner(user, comment);
+        validateCommentOwner(userId, comment);
 
         if (comment.isDeleted()) {
             throw new ApiException(ErrorCode.ALREADY_DELETED);
@@ -163,11 +162,10 @@ public class CommentService {
         );
     }
 
-    public void deleteComment(String email, Long commentId) {
-        User user = getActiveUser(email);
+    public void deleteComment(Long userId, Long commentId) {
         Comment comment = getComment(commentId);
 
-        validateCommentOwner(user, comment);
+        validateCommentOwner(userId, comment);
 
         Long postId = comment.getPost().getPostId();
 
@@ -203,17 +201,10 @@ public class CommentService {
         return post;
     }
 
-    private void validateCommentOwner(User user, Comment comment) {
-        if (!comment.getUser().getUserId().equals(user.getUserId())) {
+    private void validateCommentOwner(Long userId, Comment comment) {
+        if (!comment.getUser().getUserId().equals(userId)) {
             throw new ApiException(ErrorCode.DENIED_ACCESS);
         }
-    }
-
-    private User getActiveUser(String email) {
-        User user = userRepository.findByEmailAndDeletedFalse(email)
-                .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED_USER));
-
-        return user;
     }
 
     private CommentResponseDto toCommentResponse(Comment comment) {

@@ -43,23 +43,14 @@ public class DraftService {
 
 
     @Transactional(readOnly = true)
-    public Optional<DraftResponseDto> getActiveDraft(String email) {
-        User user = getActiveUser(email);
-
+    public Optional<DraftResponseDto> getActiveDraft(Long userId) {
         return draftRepository
-                .findByActiveOwnerId(user.getUserId())
+                .findByActiveOwnerId(userId)
                 .map(this::resolveActiveDraftResponse);
     }
 
-    private User getActiveUser(String email) {
-        return userRepository.findByEmailAndDeletedFalse(email)
-                .orElseThrow(
-                        () -> new ApiException(ErrorCode.UNAUTHORIZED_USER)
-                );
-    }
-
-    private User getActiveUserForUpdate(String email) {
-        return userRepository.findActiveUserForUpdate(email)
+    private User getActiveUserForUpdate(Long userId) {
+        return userRepository.findActiveUserForUpdate(userId)
                 .orElseThrow(
                         () -> new ApiException(
                                 ErrorCode.UNAUTHORIZED_USER
@@ -67,12 +58,12 @@ public class DraftService {
                 );
     }
 
-    public DraftCreateResult createDraft(String email, DraftRequestDto request) {
+    public DraftCreateResult createDraft(Long userId, DraftRequestDto request) {
         if (request.isEmptyContent()) {
             throw new ApiException(ErrorCode.DRAFT_EMPTY_CONTENT);
         }
 
-        User user = getActiveUserForUpdate(email);
+        User user = getActiveUserForUpdate(userId);
 
         Optional<Draft> existingDraft = draftRepository.findByActiveOwnerId(user.getUserId());
 
@@ -112,10 +103,8 @@ public class DraftService {
         );
     }
 
-    public void deleteDraft(String email, Long draftId) {
-        User user = getActiveUser(email);
-
-        Draft draft = getOwnedActiveDraft(user, draftId);
+    public void deleteDraft(Long userId, Long draftId) {
+        Draft draft = getOwnedActiveDraft(userId, draftId);
 
         draft.delete(LocalDateTime.now());
 
@@ -125,10 +114,8 @@ public class DraftService {
     }
 
     @Transactional(readOnly = true)
-    public DraftAutosaveResponseDto autosaveDraft(String email, Long draftId, DraftRequestDto request) {
-        User user = getActiveUser(email);
-
-        Draft draft = getOwnedActiveDraft(user, draftId);
+    public DraftAutosaveResponseDto autosaveDraft(Long userId, Long draftId, DraftRequestDto request) {
+        Draft draft = getOwnedActiveDraft(userId, draftId);
 
         LocalDateTime requestedAt = LocalDateTime.now();
 
@@ -141,10 +128,8 @@ public class DraftService {
         return handleAutosaveResult(result);
     }
 
-    public DraftResponseDto saveDraft(String email, Long draftId, DraftRequestDto request) {
-        User user = getActiveUser(email);
-
-        Draft draft = getOwnedActiveDraft(user, draftId);
+    public DraftResponseDto saveDraft(Long userId, Long draftId, DraftRequestDto request) {
+        Draft draft = getOwnedActiveDraft(userId, draftId);
 
         LocalDateTime requestedAt = LocalDateTime.now();
 
@@ -186,12 +171,12 @@ public class DraftService {
         return toResponse(draft, persistedCache);
     }
 
-    public DraftPublishResponseDto publishDraft(String email, Long draftId, DraftPublishRequestDto request) {
-        User user = getActiveUser(email);
+    public DraftPublishResponseDto publishDraft(Long userId, Long draftId, DraftPublishRequestDto request) {
+        User user = userRepository.getReferenceById(userId);
 
-        Draft draft = getPublishableDraft(user, draftId);
+        Draft draft = getPublishableDraft(userId, draftId);
 
-        validatePostCreationRate(user);
+        validatePostCreationRate(userId);
 
         LocalDateTime requestedAt = LocalDateTime.now();
 
@@ -236,19 +221,19 @@ public class DraftService {
 
 
 
-    private void validatePostCreationRate(User user) {
+    private void validatePostCreationRate(Long userId) {
         LocalDateTime oneMinuteAgo = LocalDateTime.now().minusMinutes(POST_LIMIT_MINUTES);
 
-        long recentPostCount = postRepository.countByUserAndCreatedAtAfter(user, oneMinuteAgo);
+        long recentPostCount = postRepository.countByUserIdAndCreatedAtAfter(userId, oneMinuteAgo);
 
         if (recentPostCount >= MAX_POSTS_PER_MINUTE) {
             throw new ApiException(ErrorCode.TOO_MANY_REQUESTS);
         }
     }
 
-    private Draft getPublishableDraft(User user, Long draftId) {
+    private Draft getPublishableDraft(Long userId, Long draftId) {
         Draft draft = draftRepository
-                        .findByDraftIdAndUser(draftId, user)
+                        .findByDraftIdAndUserId(draftId, userId)
                         .orElseThrow(
                                 () -> new ApiException(ErrorCode.DRAFT_NOT_FOUND)
                         );
@@ -451,9 +436,9 @@ public class DraftService {
         }
     }
 
-    private Draft getOwnedActiveDraft(User user, Long draftId) {
+    private Draft getOwnedActiveDraft(Long userId, Long draftId) {
         return draftRepository
-                .findByDraftIdAndUser(draftId, user)
+                .findByDraftIdAndUserId(draftId, userId)
                 .filter(Draft::isActive)
                 .orElseThrow(
                         () -> new ApiException(ErrorCode.DRAFT_NOT_FOUND)

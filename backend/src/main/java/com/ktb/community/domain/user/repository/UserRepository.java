@@ -15,16 +15,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
         select user
         from User user
-        where user.email = :email
+        where user.userId = :userId
           and user.deleted = false
         """)
     Optional<User> findActiveUserForUpdate(
-            @Param("email") String email
+            @Param("userId") Long userId
     );
 
     Optional<User> findByEmail(String email);
 
     Optional<User> findByEmailAndDeletedFalse(String email);
+
+    Optional<User> findByUserIdAndDeletedFalse(Long userId);
 
     boolean existsByEmail(String email);
 

@@ -1,6 +1,5 @@
 package com.ktb.community.domain.post.entity;
 
-import com.ktb.community.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -47,9 +46,9 @@ public class PostEditHistory {
     @Column(name = "createdAt", nullable = false)
     private LocalDateTime createdAt;
 
-    public PostEditHistory(Post post, User user, int revisionNo) {
+    public PostEditHistory(Post post, Long userId, int revisionNo) {
         this.postId = post.getPostId();
-        this.userId = user.getUserId();
+        this.userId = userId;
         this.title = post.getTitle();
         this.postBody = post.getPostBody();
         this.postImage = post.getPostImage();

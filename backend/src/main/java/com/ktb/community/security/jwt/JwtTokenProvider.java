@@ -4,6 +4,7 @@ import com.ktb.community.domain.user.entity.User;
 import com.ktb.community.global.exception.ApiException;
 import com.ktb.community.global.exception.ErrorCode;
 import com.ktb.community.security.service.CustomUserDetailsService;
+import com.ktb.community.security.principal.CustomPrincipal;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -11,7 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -111,12 +112,20 @@ public class JwtTokenProvider {
                 .getBody();
 
         String email = claims.getSubject();
-        UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+        Object userIdClaim = claims.get("userId");
+        if (!(userIdClaim instanceof Number number) || number.longValue() <= 0) {
+            throw new BadCredentialsException("Invalid userId claim");
+        }
+
+        CustomPrincipal principal = customUserDetailsService.loadUserById(number.longValue());
+        if (email == null || !email.equals(principal.getUsername())) {
+            throw new BadCredentialsException("Token subject does not match user");
+        }
 
         return new UsernamePasswordAuthenticationToken(
-                userDetails,
+                principal,
                 null,   // 토큰이 유효한지 확인했고, 사용자 정보를 꺼내 인증 객체를 만드는 단계에서 비밀번호를 가지고 있을 필요 없으므로 null 값 대체가 더 유리.
-                userDetails.getAuthorities()
+                principal.getAuthorities()
         );
     }
 

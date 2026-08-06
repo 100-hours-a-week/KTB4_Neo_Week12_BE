@@ -13,7 +13,6 @@ import com.ktb.community.domain.post.entity.PostEditHistory;
 import com.ktb.community.domain.post.entity.PostLike;
 import com.ktb.community.domain.post.entity.PostReport;
 import com.ktb.community.domain.post.entity.PostView;
-import com.ktb.community.domain.user.entity.User;
 import com.ktb.community.global.exception.ApiException;
 import com.ktb.community.global.exception.ErrorCode;
 import com.ktb.community.domain.post.repository.PostEditHistoryRepository;
@@ -53,8 +52,7 @@ public class PostService {
 
 
     @Transactional(readOnly = true)
-    public Page<PostListResponseDto> getPostList(String email, Pageable pageable) {
-        User user = getActiveUser(email);
+    public Page<PostListResponseDto> getPostList(Long userId, Pageable pageable) {
 
         Page<Post> postPage = postRepository.findByDeletedFalseOrderByCreatedAtDesc(pageable);
 
@@ -74,14 +72,14 @@ public class PostService {
 
         Set<Long> likedPostIds = new HashSet<>(
                 postLikeRepository.findLikedPostIds(
-                        user.getUserId(),
+                        userId,
                         postIds
                 )
         );
 
         Set<Long> commentedPostIds = new HashSet<>(
                 commentRepository.findCommentedPostIds(
-                        user.getUserId(),
+                        userId,
                         postIds
                 )
         );
@@ -95,16 +93,15 @@ public class PostService {
         );
     }
 
-    public PostDetailResponseDto getPostDetail(String email, Long postId) {
-        User user = getActiveUser(email);
+    public PostDetailResponseDto getPostDetail(Long userId, Long postId) {
         Post post = getPost(postId);
 
         if (post.isDeleted()) {
             throw new ApiException(ErrorCode.POST_NOT_FOUND);
         }
 
-        boolean isViewCounted = increaseViewIfNeeded(user, post);
-        boolean isLiked = postLikeRepository.existsByPostAndUser(post, user);
+        boolean isViewCounted = increaseViewIfNeeded(userId, post);
+        boolean isLiked = postLikeRepository.existsByPostIdAndUserId(postId, userId);
 
         return new PostDetailResponseDto(
                 post,
@@ -114,11 +111,10 @@ public class PostService {
         );
     }
 
-    public PostUpdateResponseDto updatePost(String email, Long postId, PostRequestDto request) {
-        User user = getActiveUser(email);
+    public PostUpdateResponseDto updatePost(Long userId, Long postId, PostRequestDto request) {
         Post post = getPost(postId);
 
-        validatePostOwner(user, post);
+        validatePostOwner(userId, post);
 
         if (post.isDeleted()) {
             throw new ApiException(ErrorCode.POST_NOT_FOUND);
@@ -133,7 +129,7 @@ public class PostService {
         }
 
         int nextRevisionNo = (int) postEditHistoryRepository.countByPostId(post.getPostId()) + 1;
-        postEditHistoryRepository.save(new PostEditHistory(post, user, nextRevisionNo));
+        postEditHistoryRepository.save(new PostEditHistory(post, userId, nextRevisionNo));
 
         post.update(request.getTitle(), request.getPostBody(), request.getPostImage());
 
@@ -144,11 +140,10 @@ public class PostService {
         );
     }
 
-    public void deletePost(String email, Long postId) {
-        User user = getActiveUser(email);
+    public void deletePost(Long userId, Long postId) {
         Post post = getPost(postId);
 
-        validatePostOwner(user, post);
+        validatePostOwner(userId, post);
 
         if (post.isDeleted()) {
             throw new ApiException(ErrorCode.POST_NOT_FOUND);
@@ -157,16 +152,15 @@ public class PostService {
         post.delete();
     }
 
-    public LikeResponseDto likePost(String email, Long postId) {
-        User user = getActiveUser(email);
+    public LikeResponseDto likePost(Long userId, Long postId) {
         Post post = getActivePost(postId);
 
-        if (postLikeRepository.existsByPostAndUser(post, user)) {
+        if (postLikeRepository.existsByPostIdAndUserId(postId, userId)) {
             throw new ApiException(ErrorCode.CONFLICTED_STATE);
         }
 
         try {
-            postLikeRepository.saveAndFlush(new PostLike(post, user));
+            postLikeRepository.saveAndFlush(new PostLike(post, userRepository.getReferenceById(userId)));
         } catch (DataIntegrityViolationException e) {
             throw new ApiException(ErrorCode.CONFLICTED_STATE);
         }
@@ -186,12 +180,10 @@ public class PostService {
         );
     }
 
-    public LikeResponseDto unlikePost(String email, Long postId) {
-        User user = getActiveUser(email);
+    public LikeResponseDto unlikePost(Long userId, Long postId) {
         Post post = getActivePost(postId);
 
         Long activePostId = post.getPostId();
-        Long userId = user.getUserId();
 
         int deletedRows = postLikeRepository.deleteByPostIdAndUserId(
                 activePostId,
@@ -217,15 +209,14 @@ public class PostService {
         );
     }
 
-    public ReportResponseDto reportPost(String email, Long postId, ReportRequestDto request) {
-        User user = getActiveUser(email);
+    public ReportResponseDto reportPost(Long userId, Long postId, ReportRequestDto request) {
         Post post = getActivePost(postId);
 
-        if (postReportRepository.existsByPostAndUser(post, user)) {
+        if (postReportRepository.existsByPostIdAndUserId(postId, userId)) {
             throw new ApiException(ErrorCode.ALREADY_REPORTED);
         }
 
-        PostReport postReport = new PostReport(post, user, request.getReportType(), request.getReason());
+        PostReport postReport = new PostReport(post, userRepository.getReferenceById(userId), request.getReportType(), request.getReason());
         postReportRepository.save(postReport);
 
         long reportCount = postReportRepository.countByPost(post);
@@ -236,10 +227,10 @@ public class PostService {
         return new ReportResponseDto(post.getPostId(), (int) reportCount, post.isBlinded());
     }
 
-    private boolean increaseViewIfNeeded(User user, Post post) {
+    private boolean increaseViewIfNeeded(Long userId, Post post) {
         LocalDateTime oneDayAgo = LocalDateTime.now().minusHours(ONE_DAY_HOURS);
 
-        return postViewRepository.findByPostAndUser(post, user)
+        return postViewRepository.findByPostIdAndUserId(post.getPostId(), userId)
                 .map(postView -> {
                     if (postView.getLastViewedAt().isBefore(oneDayAgo)) {
                         postView.updateLastViewedAt();
@@ -255,7 +246,7 @@ public class PostService {
                     return false;
                 })
                 .orElseGet(() -> {
-                    PostView postView = new PostView(post, user);
+                    PostView postView = new PostView(post, userRepository.getReferenceById(userId));
                     postViewRepository.save(postView);
 
                     int updatedRows = postRepository.increaseViews(post.getPostId());
@@ -282,16 +273,10 @@ public class PostService {
         return post;
     }
 
-    private void validatePostOwner(User user, Post post) {
-        if (!post.getUser().getUserId().equals(user.getUserId())) {
+    private void validatePostOwner(Long userId, Post post) {
+        if (!post.getUser().getUserId().equals(userId)) {
             throw new ApiException(ErrorCode.DENIED_ACCESS);
         }
     }
 
-    private User getActiveUser(String email) {
-        User user = userRepository.findByEmailAndDeletedFalse(email)
-                .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED_USER));
-
-        return user;
-    }
 }

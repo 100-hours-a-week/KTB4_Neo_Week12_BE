@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.ktb.community.security.principal.CustomPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -27,9 +27,9 @@ public class DraftController {
 
     @GetMapping("/active")
     public ResponseEntity<ApiResponse<DraftResponseDto>>
-    getActiveDraft(@AuthenticationPrincipal UserDetails userDetails) {
+    getActiveDraft(@AuthenticationPrincipal CustomPrincipal principal) {
         Optional<DraftResponseDto> response =
-                draftService.getActiveDraft(userDetails.getUsername());
+                draftService.getActiveDraft(principal.getUserId());
 
         if (response.isEmpty()) {
             return ResponseEntity
@@ -49,13 +49,13 @@ public class DraftController {
     public ResponseEntity<ApiResponse<DraftResponseDto>>
     createDraft(
             @AuthenticationPrincipal
-            UserDetails userDetails,
+            CustomPrincipal principal,
 
             @Valid
             @RequestBody
             DraftRequestDto request
     ) {
-        DraftCreateResult result = draftService.createDraft(userDetails.getUsername(), request);
+        DraftCreateResult result = draftService.createDraft(principal.getUserId(), request);
 
         HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
 
@@ -73,8 +73,8 @@ public class DraftController {
 
     @DeleteMapping("/{draftId}")
     public ResponseEntity<ApiResponse<Boolean>>
-    deleteDraft(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Long draftId) {
-        draftService.deleteDraft(userDetails.getUsername(), draftId);
+    deleteDraft(@AuthenticationPrincipal CustomPrincipal principal, @PathVariable Long draftId) {
+        draftService.deleteDraft(principal.getUserId(), draftId);
 
         return ResponseEntity.ok(
                 new ApiResponse<>(
@@ -88,7 +88,7 @@ public class DraftController {
     public ResponseEntity<ApiResponse<DraftAutosaveResponseDto>>
     autosaveDraft(
             @AuthenticationPrincipal
-            UserDetails userDetails,
+            CustomPrincipal principal,
 
             @PathVariable
             Long draftId,
@@ -99,7 +99,7 @@ public class DraftController {
     ) {
         DraftAutosaveResponseDto response =
                 draftService.autosaveDraft(
-                        userDetails.getUsername(),
+                        principal.getUserId(),
                         draftId,
                         request
                 );
@@ -113,7 +113,7 @@ public class DraftController {
     public ResponseEntity<ApiResponse<DraftResponseDto>>
     saveDraft(
             @AuthenticationPrincipal
-            UserDetails userDetails,
+            CustomPrincipal principal,
 
             @PathVariable
             Long draftId,
@@ -124,7 +124,7 @@ public class DraftController {
     ) {
         DraftResponseDto response =
                 draftService.saveDraft(
-                        userDetails.getUsername(),
+                        principal.getUserId(),
                         draftId,
                         request
                 );
@@ -141,7 +141,7 @@ public class DraftController {
     public ResponseEntity<ApiResponse<DraftPublishResponseDto>>
     publishDraft(
             @AuthenticationPrincipal
-            UserDetails userDetails,
+            CustomPrincipal principal,
 
             @PathVariable
             Long draftId,
@@ -152,7 +152,7 @@ public class DraftController {
     ) {
         DraftPublishResponseDto response =
                 draftService.publishDraft(
-                        userDetails.getUsername(),
+                        principal.getUserId(),
                         draftId,
                         request
                 );

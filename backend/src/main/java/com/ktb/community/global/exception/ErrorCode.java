@@ -12,7 +12,7 @@ public enum ErrorCode {
     DENIED_ACCESS(HttpStatus.FORBIDDEN, "denied_access"),
 
     USER_ALREADY_EXISTS(HttpStatus.CONFLICT, "already_exists"),
-    USER_NOT_FOUND(HttpStatus.UNAUTHORIZED, "not_found_user"),
+    USER_NOT_FOUND(HttpStatus.UNAUTHORIZED, "user_not_found"),
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "invalid_password"),
     REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "refresh_token_not_found"),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "invalid_refresh_token"),

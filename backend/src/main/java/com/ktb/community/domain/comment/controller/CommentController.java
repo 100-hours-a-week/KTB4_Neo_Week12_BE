@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.ktb.community.security.principal.CustomPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,11 +24,11 @@ public class CommentController {
 
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<ApiResponse<CommentResponseDto>> createComment(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long postId,
             @Valid @RequestBody CommentRequestDto request
     ) {
-        CommentResponseDto response = commentService.createComment(userDetails.getUsername(), postId, request);
+        CommentResponseDto response = commentService.createComment(principal.getUserId(), postId, request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("create_comment_success", response));
@@ -36,11 +36,11 @@ public class CommentController {
 
     @PostMapping("/comments/{commentId}/replies")
     public ResponseEntity<ApiResponse<CommentResponseDto>> createReply(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long commentId,
             @Valid @RequestBody CommentRequestDto request
     ) {
-        CommentResponseDto response = commentService.createReply(userDetails.getUsername(), commentId, request);
+        CommentResponseDto response = commentService.createReply(principal.getUserId(), commentId, request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("create_reply_success", response));
@@ -59,11 +59,11 @@ public class CommentController {
 
     @PatchMapping("/comments/{commentId}")
     public ResponseEntity<ApiResponse<CommentUpdateResponseDto>> updateComment(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long commentId,
             @Valid @RequestBody CommentRequestDto request
     ) {
-        CommentUpdateResponseDto response = commentService.updateComment(userDetails.getUsername(), commentId, request);
+        CommentUpdateResponseDto response = commentService.updateComment(principal.getUserId(), commentId, request);
 
         return ResponseEntity.ok(
                 new ApiResponse<>("update_comment_success", response)
@@ -72,10 +72,10 @@ public class CommentController {
 
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<ApiResponse<Boolean>> deleteComment(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long commentId
     ) {
-        commentService.deleteComment(userDetails.getUsername(), commentId);
+        commentService.deleteComment(principal.getUserId(), commentId);
 
         return ResponseEntity.ok(
                 new ApiResponse<>("delete_comment_success", true)
