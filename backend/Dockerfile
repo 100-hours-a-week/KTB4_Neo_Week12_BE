@@ -52,8 +52,8 @@ WORKDIR /app
 RUN groupadd --system spring \
     && useradd --system --gid spring spring
 
-# H2 데이터와 업로드 이미지 저장 디렉토리 생성
-RUN mkdir -p /app/data /app/uploads \
+# 업로드 이미지 저장 디렉토리 생성
+RUN mkdir -p /app/uploads \
     && chown -R spring:spring /app
 
 # builder 단계에서 생성한 JAR만 최종 이미지 복사

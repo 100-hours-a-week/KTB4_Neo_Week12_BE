@@ -45,14 +45,13 @@ services:
       - .env
 
     environment:
-      # H2 데이터를 Volume이 연결된 /app/data에 저장한다.
-      DB_URL: "jdbc:h2:file:/app/data/community"
-
-      # H2 사용자 이름
-      DB_USERNAME: "sa"
-
-      # H2 비밀번호 없음
-      DB_PASSWORD: ""
+      # 운영에서는 EC2의 .env에 있는 RDS 접속 정보를 사용한다.
+      SPRING_PROFILES_ACTIVE: "${SPRING_PROFILES_ACTIVE:-prod}"
+      DB_URL: "${DB_URL}"
+      DB_USERNAME: "${DB_USERNAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_MAX_POOL_SIZE: "${DB_MAX_POOL_SIZE:-10}"
+      DB_MIN_IDLE: "${DB_MIN_IDLE:-2}"
 
       # Compose 내부 Redis 서비스에 연결한다.
       REDIS_HOST: "redis"
@@ -70,9 +69,6 @@ services:
         condition: service_healthy
 
     volumes:
-      # H2 데이터가 컨테이너 재생성 후에도 남도록 한다.
-      - backend-data:/app/data
-
       # 업로드 이미지가 컨테이너 재생성 후에도 남도록 한다.
       - backend-uploads:/app/uploads
 
@@ -143,9 +139,6 @@ services:
         max-file: "3"
 
 volumes:
-  # H2 DB 영구 저장용 Docker Volume
-  backend-data:
-
   # 업로드 이미지 영구 저장용 Docker Volume
   backend-uploads:
 

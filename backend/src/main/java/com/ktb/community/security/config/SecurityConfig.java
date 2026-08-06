@@ -46,13 +46,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/users/refresh").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/signup-images/presign").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/signup-images/*/complete").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().hasAnyRole("USER", "ADMIN")
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .headers(headers -> headers
-                    .frameOptions(frameOptions -> frameOptions.sameOrigin())
-                );
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
